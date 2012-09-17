@@ -38,12 +38,11 @@ class Chef
 
       def source(*args)
         if not args.empty?
-          args = Array(args).flatten
+          args = args.flatten
           validate_source(args)
           @source = args
-        elsif self.instance_variable_defined?(:@source) == true
-          @source
         end
+        @source
       end
 
       def checksum(args=nil)
