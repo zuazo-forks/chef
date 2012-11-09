@@ -109,7 +109,15 @@ class Chef
       end
 
       define_resource_requirements
-      process_resource_requirements
+      # sometimes, before notifications can avoid requirements exceptions,
+      # so we need to catch them here, before this kind of notifications are run
+      exception = nil
+      begin
+        process_resource_requirements
+      rescue StandardError => e
+        exception = e
+        raise exception unless whyrun_supported?
+      end
 
       # user-defined providers including LWRPs may 
       # not include whyrun support - if they don't support it
@@ -118,16 +126,31 @@ class Chef
       # we can't execute the action.
       # in non-whyrun mode, this will still cause the action to be
       # executed normally.
+      action_blocked = false
       if !whyrun_mode?
         send("action_#{@action}")
       elsif whyrun_supported? && !requirements.action_blocked?(@action)
         send("action_#{@action}")
       else
-        events.resource_bypassed(@new_resource, @action, self)
+        action_blocked = true if whyrun_supported? && requirements.action_blocked?(@action)
+        events.resource_bypassed(@new_resource, @action, self) unless whyrun_supported?
       end
       # run before notifications when whyrun is supported
-      if whyrun_supported? && !converge_actions.empty?
+      if whyrun_supported? && !converge_actions.empty? && @new_resource.has_before_notifications?
         @new_resource.run_before_notifications
+
+        # now check if the exception occurs again after running before notifications
+        unless exception.nil?
+          process_resource_requirements
+
+          if action_blocked && !requirements.action_blocked?(@action)
+            send("action_#{@action}")
+          else
+            events.resource_bypassed(@new_resource, @action, self)
+          end
+        end
+      elsif !exception.nil?
+        raise exception
       end
       converge
 
@@ -135,6 +158,7 @@ class Chef
     end
 
     def process_resource_requirements
+      requirements.clean_blocked_actions
       requirements.run(:all_actions) unless @action == :nothing
       requirements.run(@action)
     end

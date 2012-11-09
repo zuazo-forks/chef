@@ -579,8 +579,12 @@ F
       @run_before = block
     end
 
+    def has_before_notifications?
+      !@run_before.nil?
+    end
+
     def run_before_notifications
-      @run_before.call if @run_before
+      @run_before.call if has_before_notifications?
     end
 
     def run_action(action, notification_type=nil, notifying_resource=nil)
