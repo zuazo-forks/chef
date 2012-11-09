@@ -575,6 +575,14 @@ F
       run_context.events
     end
 
+    def run_before(&block)
+      @run_before = block
+    end
+
+    def run_before_notifications
+      @run_before.call if @run_before
+    end
+
     def run_action(action, notification_type=nil, notifying_resource=nil)
       # reset state in case of multiple actions on the same resource.
       @elapsed_time = 0

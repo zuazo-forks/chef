@@ -97,11 +97,14 @@ class Chef
       # TODO: it would be preferable to get the action to be executed in the
       # constructor...
 
+      # run before notifications when whyrun is not supported
+      @new_resource.run_before_notifications unless whyrun_supported?
+
       # user-defined LWRPs may include unsafe load_current_resource methods that cannot be run in whyrun mode
       if !whyrun_mode? || whyrun_supported?
         load_current_resource
         events.resource_current_state_loaded(@new_resource, @action, @current_resource)
-      elsif whyrun_mode? && !whyrun_supported?
+      else
         events.resource_current_state_load_bypassed(@new_resource, @action, @current_resource)
       end
 
@@ -115,12 +118,16 @@ class Chef
       # we can't execute the action.
       # in non-whyrun mode, this will still cause the action to be
       # executed normally.
-      if whyrun_supported? && !requirements.action_blocked?(@action)
+      if !whyrun_mode?
         send("action_#{@action}")
-      elsif whyrun_mode?
-        events.resource_bypassed(@new_resource, @action, self)
+      elsif whyrun_supported? && !requirements.action_blocked?(@action)
+        send("action_#{@action}")
       else
-        send("action_#{@action}")
+        events.resource_bypassed(@new_resource, @action, self)
+      end
+      # run before notifications when whyrun is supported
+      if whyrun_supported? && !converge_actions.empty?
+        @new_resource.run_before_notifications
       end
       converge
 
