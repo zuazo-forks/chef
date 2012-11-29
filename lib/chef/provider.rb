@@ -139,6 +139,7 @@ class Chef
       end
 
       set_updated_status
+
       cleanup_after_converge
     end
 

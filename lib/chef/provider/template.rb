@@ -109,9 +109,7 @@ class Chef
         context = {}
         context.merge!(@new_resource.variables)
         context[:node] = node
-        if ::File.exist?(template_location)
-          render_template(IO.read(template_location), context, &block)
-        end
+        render_template(IO.read(template_location), context, &block)
       end
 
     end
