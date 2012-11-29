@@ -402,7 +402,6 @@ describe Chef::Provider::User do
     end
 
     it "should raise a Chef::Exceptions::User if we try and lock a user that does not exist" do
-      @provider.stub!(:check_lock).and_return(false)
       @provider.user_exists = false
       @provider.action = :lock
 
@@ -436,7 +435,6 @@ describe Chef::Provider::User do
     end
 
     it "should raise a Chef::Exceptions::User if we try and unlock a user that does not exist" do
-      @provider.stub!(:check_lock).and_return(false)
       @provider.user_exists = false
       @provider.action = :unlock
       lambda { @provider.run_action }.should raise_error(Chef::Exceptions::User)
