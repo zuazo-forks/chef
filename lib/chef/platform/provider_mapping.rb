@@ -137,7 +137,8 @@ class Chef
               :service => Chef::Provider::Service::Redhat,
               :cron => Chef::Provider::Cron,
               :package => Chef::Provider::Package::Yum,
-              :mdadm => Chef::Provider::Mdadm
+              :mdadm => Chef::Provider::Mdadm,
+              :ifconfig => Chef::Provider::Ifconfig::Redhat
             }
           },
           :amazon   => {
@@ -161,7 +162,8 @@ class Chef
               :service => Chef::Provider::Service::Redhat,
               :cron => Chef::Provider::Cron,
               :package => Chef::Provider::Package::Yum,
-              :mdadm => Chef::Provider::Mdadm
+              :mdadm => Chef::Provider::Mdadm,
+              :ifconfig => Chef::Provider::Ifconfig::Redhat
             }
           },
           :suse     => {
@@ -185,7 +187,8 @@ class Chef
               :service => Chef::Provider::Service::Redhat,
               :cron => Chef::Provider::Cron,
               :package => Chef::Provider::Package::Yum,
-              :mdadm => Chef::Provider::Mdadm
+              :mdadm => Chef::Provider::Mdadm,
+              :ifconfig => Chef::Provider::Ifconfig::Redhat
             }
           },
           :gentoo   => {
