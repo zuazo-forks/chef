@@ -107,4 +107,3 @@ require 'chef/provider/registry_key'
 
 require 'chef/provider/ifconfig/redhat'
 require 'chef/provider/ifconfig/debian'
-
