@@ -67,8 +67,8 @@ class Chef
     def initialize(couchdb=nil)
       @name = ''
       @description = ''
-      @default_attributes = Mash.new
-      @override_attributes = Mash.new
+      @env_default_attributes = {"_default" => Mash.new}
+      @env_override_attributes = {"_default" => Mash.new}
       @env_run_lists = {"_default" => Chef::RunList.new}
       @couchdb_rev = nil
       @couchdb_id = nil
@@ -143,30 +143,82 @@ class Chef
     alias :env_run_list :env_run_lists
 
     def default_attributes(arg=nil)
-      set_or_return(
-        :default_attributes,
-        arg,
-        :kind_of => Hash
-      )
+      unless (arg.nil?)
+        raise Exceptions::ValidationFailed, "Option default_attributes must be a kind of Hash! You passed #{arg.inspect}." unless arg.kind_of?(Hash)
+        @env_default_attributes["_default"] = arg
+      end
+      @env_default_attributes["_default"]
     end
 
     def override_attributes(arg=nil)
-      set_or_return(
-        :override_attributes,
-        arg,
-        :kind_of => Hash
-      )
+      unless (arg.nil?)
+        raise Exceptions::ValidationFailed, "Option override_attributes must be a kind of Hash! You passed #{arg.inspect}." unless arg.kind_of?(Hash)
+        @env_override_attributes["_default"] = arg
+      end
+      @env_override_attributes["_default"]
+    end
+
+    # For default_attributes expansion
+    def default_attributes_for(environment)
+      if env_default_attributes[environment].nil?
+        env_default_attributes["_default"]
+      else
+        env_default_attributes[environment]
+      end
+    end
+
+    # For override_attributes expansion
+    def override_attributes_for(environment)
+      if env_override_attributes[environment].nil?
+        env_override_attributes["_default"]
+      else
+        env_override_attributes[environment]
+      end
+    end
+
+    # Per environment default_attributes lists
+    def env_default_attributes(env_default_attributes=nil)
+      if (!env_default_attributes.nil?)
+        unless env_default_attributes.key?("_default")
+          msg = "_default key is required in env_default_attributes.\n"
+          msg << "(env_default_attributes: #{env_default_attributes.inspect})"
+          raise Chef::Exceptions::InvalidEnvironmentDefaultAttributesSpecification, msg
+        end
+        @env_default_attributes.clear
+        env_default_attributes.each { |k,v| @env_default_attributes[k] = v }
+      end
+      @env_default_attributes
+    end
+
+    # Per environment override_attributes lists
+    def env_override_attributes(env_override_attributes=nil)
+      if (!env_override_attributes.nil?)
+        unless env_override_attributes.key?("_default")
+          msg = "_default key is required in env_override_attributes.\n"
+          msg << "(env_override_attributes: #{env_override_attributes.inspect})"
+          raise Chef::Exceptions::InvalidEnvironmentOverrideAttributesSpecification, msg
+        end
+        @env_override_attributes.clear
+        env_override_attributes.each { |k,v| @env_override_attributes[k] = v }
+      end
+      @env_override_attributes
     end
 
     def to_hash
       env_run_lists_without_default = @env_run_lists.dup
       env_run_lists_without_default.delete("_default")
+      env_default_attributes_without_default = @env_default_attributes.dup
+      env_default_attributes_without_default.delete("_default")
+      env_override_attributes_without_default = @env_override_attributes.dup
+      env_override_attributes_without_default.delete("_default")
       result = {
         "name" => @name,
         "description" => @description,
         'json_class' => self.class.name,
-        "default_attributes" => @default_attributes,
-        "override_attributes" => @override_attributes,
+        "default_attributes" => default_attributes,
+        "override_attributes" => override_attributes,
+        "env_default_attributes" => env_default_attributes_without_default,
+        "env_override_attributes" => env_override_attributes_without_default,
         "chef_type" => "role",
 
         #Render to_json correctly for run_list items (both run_list and evn_run_lists)
@@ -189,8 +241,8 @@ class Chef
     def update_from!(o)
       description(o.description)
       recipes(o.recipes) if defined?(o.recipes)
-      default_attributes(o.default_attributes)
-      override_attributes(o.override_attributes)
+      env_default_attributes(o.env_default_attributes) unless o.env_default_attributes.nil?
+      env_override_attributes(o.env_override_attributes) unless o.env_override_attributes.nil?
       env_run_lists(o.env_run_lists) unless o.env_run_lists.nil?
       self
     end
@@ -200,8 +252,19 @@ class Chef
       role = new
       role.name(o["name"])
       role.description(o["description"])
-      role.default_attributes(o["default_attributes"])
-      role.override_attributes(o["override_attributes"])
+
+      # Old clients do not include env_default_attributes/env_override_attributes,
+      # so only merge if it's there.
+      env_default_attributes = {"_default" => o["default_attributes"]}
+      if o["env_default_attributes" ]
+        env_default_attributes.merge!(o["env_default_attributes" ])
+      end
+      role.env_default_attributes(env_default_attributes)
+      env_override_attributes = {"_default" => o["override_attributes"]}
+      if o["env_override_attributes" ]
+        env_override_attributes.merge!(o["env_override_attributes" ])
+      end
+      role.env_override_attributes(env_override_attributes)
 
       # _default run_list is in 'run_list' for newer clients, and
       # 'recipes' for older clients.
