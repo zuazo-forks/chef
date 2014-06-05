@@ -48,6 +48,7 @@ require 'open-uri'
 #
 class Chef::EncryptedDataBagItem
   ALGORITHM = 'aes-256-cbc'
+  HMAC_ALGORITHM = 'sha256'
 
   #
   # === Synopsis
@@ -149,6 +150,20 @@ class Chef::EncryptedDataBagItem
       raise ArgumentError, "invalid zero length secret in '#{path}'"
     end
     secret
+  end
+
+  def self.data_key_length
+    cipher = OpenSSL::Cipher::Cipher.new(ALGORITHM)
+    cipher.key_len
+  end
+
+  def self.hmac_key_length
+    digest = OpenSSL::Digest::Digest.new(HMAC_ALGORITHM)
+    digest.block_length
+  end
+
+  def self.key_length
+    hmac_key_length + data_key_length
   end
 
 end
